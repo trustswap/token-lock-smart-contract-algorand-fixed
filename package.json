@@ -1,0 +1,26 @@
+{
+  "name": "smart-contracts",
+  "version": "1.0.0",
+  "description": "The Trustswap application on Algorand is achieved by employing two Layer-1 Algorand Smart contracts (ASC1). A stateful smart contract manages the global contract storage and local account storage for the application. The stateless escrow contract is resposible for holding and managing the funds locked using the application.",
+  "main": "deploy.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@git.netobjex.com:trustswap/smart-contracts.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "algosdk": "^1.15.0",
+    "atob": "^2.1.2",
+    "btoa": "^1.2.1",
+    "dotenv": "^10.0.0",
+    "fs": "0.0.1-security",
+    "util": "^0.12.4"
+  }
+}

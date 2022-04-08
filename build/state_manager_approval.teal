@@ -1,0 +1,562 @@
+#pragma version 5
+txn ApplicationID
+int 0
+==
+bnz main_l20
+txn OnCompletion
+int CloseOut
+==
+bnz main_l19
+txn OnCompletion
+int OptIn
+==
+bnz main_l18
+txn OnCompletion
+int UpdateApplication
+==
+bnz main_l17
+txna ApplicationArgs 0
+byte "S"
+==
+bnz main_l16
+txna ApplicationArgs 0
+byte "D"
+==
+bnz main_l15
+txna ApplicationArgs 0
+byte "W"
+==
+bnz main_l14
+txna ApplicationArgs 0
+byte "U"
+==
+bnz main_l13
+txna ApplicationArgs 0
+byte "T"
+==
+bnz main_l12
+txna ApplicationArgs 0
+byte "C"
+==
+bnz main_l11
+err
+main_l11:
+byte "LOCK"
+store 3
+gtxna 0 ApplicationArgs 1
+gtxna 0 ApplicationArgs 2
+concat
+gtxna 0 ApplicationArgs 3
+concat
+gtxna 0 ApplicationArgs 5
+concat
+store 3
+int 1
+load 3
+app_local_get
+store 1
+byte "LOCK"
+store 3
+gtxna 0 ApplicationArgs 1
+gtxna 0 ApplicationArgs 4
+concat
+gtxna 0 ApplicationArgs 3
+concat
+gtxna 0 ApplicationArgs 5
+concat
+store 4
+byte ""
+store 3
+txna Accounts 1
+gtxna 0 ApplicationArgs 2
+concat
+store 5
+int 0
+byte "COUNTER"
+app_local_get
+store 6
+int 1
+byte "COUNTER"
+app_local_get
+store 7
+global GroupSize
+int 1
+==
+gtxn 0 TypeEnum
+int appl
+==
+&&
+gtxn 0 NumAccounts
+int 1
+==
+&&
+gtxn 0 NumAppArgs
+int 6
+==
+&&
+gtxn 0 OnCompletion
+int NoOp
+==
+&&
+gtxn 0 AssetCloseTo
+global ZeroAddress
+==
+&&
+gtxn 0 RekeyTo
+global ZeroAddress
+==
+&&
+txna Accounts 0
+txna Accounts 1
+!=
+&&
+load 1
+int 0
+!=
+&&
+txna Accounts 1
+gtxna 0 ApplicationArgs 2
+concat
+app_global_get
+txna Accounts 0
+==
+&&
+assert
+int 1
+load 3
+app_local_del
+load 5
+app_global_del
+int 0
+load 4
+load 1
+app_local_put
+int 0
+byte "COUNTER"
+int 0
+byte "COUNTER"
+app_local_get
+int 1
++
+app_local_put
+int 1
+byte "COUNTER"
+load 7
+int 1
+-
+app_local_put
+int 1
+b main_l21
+main_l12:
+byte "LOCK"
+store 3
+gtxna 0 ApplicationArgs 1
+gtxna 0 ApplicationArgs 2
+concat
+gtxna 0 ApplicationArgs 3
+concat
+gtxna 0 ApplicationArgs 4
+concat
+store 3
+int 0
+load 3
+app_local_get
+store 1
+byte ""
+store 5
+txna Accounts 0
+gtxna 0 ApplicationArgs 2
+concat
+store 5
+global GroupSize
+int 1
+==
+gtxn 0 TypeEnum
+int appl
+==
+&&
+gtxn 0 NumAccounts
+int 1
+==
+&&
+gtxn 0 NumAppArgs
+int 5
+==
+&&
+gtxn 0 OnCompletion
+int NoOp
+==
+&&
+gtxn 0 AssetCloseTo
+global ZeroAddress
+==
+&&
+gtxn 0 RekeyTo
+global ZeroAddress
+==
+&&
+txna Accounts 0
+txna Accounts 1
+!=
+&&
+load 1
+int 0
+!=
+&&
+int 1
+load 3
+app_local_get
+int 0
+==
+&&
+txna Accounts 0
+gtxna 0 ApplicationArgs 2
+concat
+app_global_get
+int 0
+==
+&&
+assert
+load 5
+txna Accounts 1
+app_global_put
+int 1
+b main_l21
+main_l13:
+byte "LOCK"
+store 3
+gtxna 0 ApplicationArgs 1
+gtxna 0 ApplicationArgs 2
+concat
+gtxna 0 ApplicationArgs 3
+concat
+gtxna 0 ApplicationArgs 5
+concat
+store 3
+int 0
+load 3
+app_local_get
+store 1
+global GroupSize
+int 1
+==
+gtxn 0 TypeEnum
+int appl
+==
+&&
+gtxn 0 NumAccounts
+int 0
+==
+&&
+gtxn 0 NumAppArgs
+int 6
+==
+&&
+gtxn 0 OnCompletion
+int NoOp
+==
+&&
+gtxn 0 AssetCloseTo
+global ZeroAddress
+==
+&&
+gtxn 0 RekeyTo
+global ZeroAddress
+==
+&&
+load 1
+int 0
+!=
+&&
+txna Accounts 0
+gtxna 0 ApplicationArgs 2
+concat
+app_global_get
+int 0
+==
+&&
+gtxna 0 ApplicationArgs 4
+btoi
+load 1
+>
+&&
+assert
+int 0
+load 3
+gtxna 0 ApplicationArgs 4
+btoi
+app_local_put
+int 1
+b main_l21
+main_l14:
+byte "LOCK"
+store 3
+gtxn 1 XferAsset
+itob
+gtxna 0 ApplicationArgs 2
+concat
+gtxn 1 AssetAmount
+itob
+concat
+gtxna 0 ApplicationArgs 1
+concat
+store 3
+int 0
+load 3
+app_local_get
+store 1
+int 1
+byte "TRUSTSWAP_ESCROW"
+app_local_get
+store 2
+global GroupSize
+int 2
+==
+gtxn 0 TypeEnum
+int appl
+==
+&&
+gtxn 0 NumAccounts
+int 1
+==
+&&
+gtxn 0 NumAppArgs
+int 3
+==
+&&
+gtxn 0 OnCompletion
+int NoOp
+==
+&&
+gtxn 1 TypeEnum
+int axfer
+==
+&&
+gtxn 1 AssetCloseTo
+global ZeroAddress
+==
+&&
+gtxn 1 RekeyTo
+global ZeroAddress
+==
+&&
+gtxn 1 AssetReceiver
+gtxn 0 Sender
+==
+&&
+load 2
+int 1
+==
+&&
+txna Accounts 0
+gtxna 0 ApplicationArgs 2
+concat
+app_global_get
+int 0
+==
+&&
+load 1
+int 0
+!=
+&&
+global LatestTimestamp
+load 1
+>
+&&
+assert
+int 0
+load 3
+app_local_del
+int 0
+byte "COUNTER"
+int 0
+byte "COUNTER"
+app_local_get
+int 1
+-
+app_local_put
+int 1
+b main_l21
+main_l15:
+byte "LOCK"
+store 3
+gtxn 1 XferAsset
+itob
+gtxna 0 ApplicationArgs 2
+concat
+gtxn 1 AssetAmount
+itob
+concat
+global LatestTimestamp
+itob
+concat
+store 3
+int 0
+load 3
+app_local_get
+store 0
+int 1
+byte "TRUSTSWAP_ESCROW"
+app_local_get
+store 2
+int 0
+byte "COUNTER"
+app_local_get
+store 6
+global GroupSize
+int 2
+==
+gtxn 0 TypeEnum
+int appl
+==
+&&
+gtxn 0 NumAccounts
+int 1
+==
+&&
+gtxn 0 NumAppArgs
+int 3
+==
+&&
+gtxn 0 OnCompletion
+int NoOp
+==
+&&
+gtxna 0 ApplicationArgs 1
+btoi
+global LatestTimestamp
+>
+&&
+gtxna 0 ApplicationArgs 2
+btoi
+int 0
+>
+&&
+gtxn 1 AssetAmount
+int 0
+>
+&&
+load 0
+int 0
+==
+&&
+load 2
+int 1
+==
+&&
+gtxn 1 TypeEnum
+int axfer
+==
+&&
+gtxn 1 Sender
+gtxn 0 Sender
+==
+&&
+gtxn 1 AssetReceiver
+txna Accounts 1
+==
+&&
+gtxn 1 AssetCloseTo
+global ZeroAddress
+==
+&&
+gtxn 1 RekeyTo
+global ZeroAddress
+==
+&&
+assert
+int 0
+load 3
+gtxna 0 ApplicationArgs 1
+btoi
+app_local_put
+int 0
+byte "COUNTER"
+int 0
+byte "COUNTER"
+app_local_get
+int 1
++
+app_local_put
+int 1
+b main_l21
+main_l16:
+txn Sender
+global CreatorAddress
+==
+byte "SET_ESCROW"
+app_global_get
+int 0
+==
+&&
+txn TypeEnum
+int appl
+==
+&&
+txn OnCompletion
+int NoOp
+==
+&&
+txn AssetCloseTo
+global ZeroAddress
+==
+&&
+txn RekeyTo
+global ZeroAddress
+==
+&&
+global GroupSize
+int 1
+==
+&&
+assert
+byte "SET_ESCROW"
+int 1
+app_global_put
+int 1
+byte "TRUSTSWAP_ESCROW"
+int 1
+app_local_put
+int 1
+b main_l21
+main_l17:
+txn Sender
+global CreatorAddress
+==
+assert
+int 1
+b main_l21
+main_l18:
+txn AssetCloseTo
+global ZeroAddress
+==
+txn RekeyTo
+global ZeroAddress
+==
+&&
+assert
+int 1
+b main_l21
+main_l19:
+int 0
+byte "COUNTER"
+app_local_get
+store 6
+load 6
+int 0
+==
+txn AssetCloseTo
+global ZeroAddress
+==
+&&
+txn RekeyTo
+global ZeroAddress
+==
+&&
+assert
+int 1
+b main_l21
+main_l20:
+int 1
+main_l21:
+return

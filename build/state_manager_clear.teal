@@ -1,0 +1,9 @@
+#pragma version 5
+int 0
+byte "COUNTER"
+app_local_get
+int 0
+==
+assert
+int 1
+return

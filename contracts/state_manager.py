@@ -32,9 +32,9 @@ def approval_program():
     #Read counter from local state of first additional account in accounts array
     read_other_user_counter = App.localGet(Int(1), KEY_COUNTER)
 
-    #Read global state to check for lock transfer in progress
-    def lock_transfer_status(account: Bytes): 
-        return App.globalGet(Concat(account, Gtxn[0].application_args[2])) 
+    #Read local state to check for lock transfer in progress
+    def lock_transfer_status(type: Int, account: Bytes): 
+        return App.localGet(Int(type), Concat(Bytes('LOCK'), account, Gtxn[0].application_args[2])) 
     
     #Read lock details from transaction sender's local state
     def read_user_local_state(key: Bytes): return App.localGet(Int(0), key)
@@ -215,7 +215,7 @@ def approval_program():
                 scratchvar_escrow_local_state.load() == Int(1),
 
                 #Lock transfer must not be in progress
-                lock_transfer_status(Txn.accounts[0]) == Int(0), 
+                lock_transfer_status(0, Txn.accounts[0]) == Int(0), 
 
                 #Lock details must exist in user's local state
                 scratchvar_time_period.load() != Int(0),         
@@ -263,11 +263,11 @@ def approval_program():
                 scratchvar_time_period.load() != Int(0),      
 
                 #Lock transfer must not be in progress
-                lock_transfer_status(Txn.accounts[0]) == Int(0),     
+                lock_transfer_status(0, Txn.accounts[0]) == Int(0),     
 
                 #New lock in period should be greater than current period
                 Btoi(Gtxn[0].application_args[4]) > scratchvar_time_period.load()  
-            ) 
+            )
         ),
        
         #Updating lock details to user's local state       
@@ -289,7 +289,7 @@ def approval_program():
         scratchvar_key.store(Bytes('LOCK')),
         scratchvar_key.store(Concat(Gtxn[0].application_args[1], Gtxn[0].application_args[2], Gtxn[0].application_args[3], Gtxn[0].application_args[4])), 
         scratchvar_time_period.store(read_user_local_state(scratchvar_key.load())),
-        scratchvar_transfer_key.store(Bytes('')),
+        scratchvar_transfer_key.store(Bytes('LOCK')),
         scratchvar_transfer_key.store(Concat(Txn.accounts[0], Gtxn[0].application_args[2])),        
 
         Assert(
@@ -313,12 +313,15 @@ def approval_program():
                 read_other_user_local_state(scratchvar_key.load()) == Int(0),
 
                 #Lock transfer must not be in progress
-                lock_transfer_status(Txn.accounts[0]) == Int(0),        
+                lock_transfer_status(0, Txn.accounts[0]) == Int(0),        
             ) 
         ),
        
-        #Updating global state to store transfer details       
-        App.globalPut(scratchvar_transfer_key.load(), Txn.accounts[1]),
+        #Updating local state to store transfer details
+        write_user_local_state(
+            scratchvar_transfer_key.load(),
+            Txn.accounts[1]
+        ),
         Int(1)   
     ])
 
@@ -337,7 +340,7 @@ def approval_program():
         scratchvar_key.store(Bytes('LOCK')),
         scratchvar_new_key.store(Concat(Gtxn[0].application_args[1], Gtxn[0].application_args[4], Gtxn[0].application_args[3], Gtxn[0].application_args[5])), 
 
-        scratchvar_key.store(Bytes('')),
+        scratchvar_key.store(Bytes('LOCK')),
         scratchvar_transfer_key.store(Concat(Txn.accounts[1], Gtxn[0].application_args[2])),        
 
         scratchvar_counter.store(read_user_counter),
@@ -363,15 +366,15 @@ def approval_program():
                 scratchvar_time_period.load() != Int(0),  
 
                 #Lock transfer must be in progress
-                lock_transfer_status(Txn.accounts[1]) == Txn.accounts[0],  
-            )  
+                lock_transfer_status(1, Txn.accounts[1]) == Txn.accounts[0],  
+            )
         ),
         
         #Deleting lock details from original owner's local state
         App.localDel(Int(1), scratchvar_key.load()),
 
-        #Deleting global state that represents transfer in progress
-        App.globalDel(scratchvar_transfer_key.load()),
+        #Deleting local state that represents transfer in progress from original owner
+        App.localDel(Int(1), scratchvar_transfer_key.load()),
  
         #Updating lock details to new owner's local state
         write_user_local_state(

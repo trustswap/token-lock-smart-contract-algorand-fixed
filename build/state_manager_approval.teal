@@ -65,7 +65,7 @@ concat
 gtxna 0 ApplicationArgs 5
 concat
 store 4
-byte ""
+byte "LOCK"
 store 3
 txna Accounts 1
 gtxna 0 ApplicationArgs 2
@@ -114,10 +114,13 @@ load 1
 int 0
 !=
 &&
+int 1
+byte "LOCK"
 txna Accounts 1
+concat
 gtxna 0 ApplicationArgs 2
 concat
-app_global_get
+app_local_get
 txna Accounts 0
 ==
 &&
@@ -125,8 +128,9 @@ assert
 int 1
 load 3
 app_local_del
+int 1
 load 5
-app_global_del
+app_local_del
 int 0
 load 4
 load 1
@@ -162,7 +166,7 @@ int 0
 load 3
 app_local_get
 store 1
-byte ""
+byte "LOCK"
 store 5
 txna Accounts 0
 gtxna 0 ApplicationArgs 2
@@ -209,17 +213,21 @@ app_local_get
 int 0
 ==
 &&
+int 0
+byte "LOCK"
 txna Accounts 0
+concat
 gtxna 0 ApplicationArgs 2
 concat
-app_global_get
+app_local_get
 int 0
 ==
 &&
 assert
+int 0
 load 5
 txna Accounts 1
-app_global_put
+app_local_put
 int 1
 b main_l21
 main_l13:
@@ -268,10 +276,13 @@ load 1
 int 0
 !=
 &&
+int 0
+byte "LOCK"
 txna Accounts 0
+concat
 gtxna 0 ApplicationArgs 2
 concat
-app_global_get
+app_local_get
 int 0
 ==
 &&
@@ -348,10 +359,13 @@ load 2
 int 1
 ==
 &&
+int 0
+byte "LOCK"
 txna Accounts 0
+concat
 gtxna 0 ApplicationArgs 2
 concat
-app_global_get
+app_local_get
 int 0
 ==
 &&

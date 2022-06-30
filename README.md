@@ -1,6 +1,6 @@
-# Trustswap - Algorand : Smart contracts
+# TrustSwap - Algorand: Token Lock Smart Contract
 
-The Trustswap application on Algorand is built by employing two Layer-1 Algorand Smart contracts (ASC1). A stateful smart contract manages the global contract storage and local account storage for the application. The stateless escrow contract is resposible for holding and managing the funds locked using the application. 
+The Trustswap application on Algorand is built by employing a Layer-1 Algorand Smart contracts (ASC1). The stateful smart contract manages the global contract storage and local account storage for the application. The locked tokens are also held inside the stateful contract. After maturity of the lock, the contract will send back the tokens via Inner Txns, when claimed by the lock owner.
 
 ## Deploy smart contract
 The contract is deployed and managed by a multisignature account, giving multiple parties control over the application. Follow the subsequent steps to deploy the smart contract on the Algorand network.
@@ -17,12 +17,13 @@ ADMIN_ACCOUNT_2_MNEMONICS = "<insert-admin-account2-mnemonics>"
 ADMIN_ACCOUNT_3_MNEMONICS = "<insert-admin-account3-mnemonics>"
 ```
 
-### Install Python dependencies
+### Install Python dependencies inside a virtual environment
+Minimum version:
 ```
-Python 3.9.6
-pyteal 0.8.0
+Python 3.10
+pyteal 0.13.0
+python3 -m pip install -r requirements.txt
 ```
-
 
 ### Install Javascript dependencies
 ```
@@ -73,38 +74,32 @@ To deploy the smart contract to the Algorand network, follow the subsequent step
     STATEFUL_APP_ID = <insert app ID>
     ```
 
-
-### Compile stateless smart contract
-To generate the escrow account, 
- - Replace the new state manager app id in the escrow contract in the file contracts/escrow_account.py line 41.
- - Compile the contract to generate the TEAL code in build/escrow_account.teal
-    ```
-    $ cd contracts
-    $ python3 escrow_account.py
-    $ cd ..
-    ```
- -  Generate the escrow account's address and logic signature
-    ```
-    node deploy.js generate_escrow
-    ```
- - Update the escrow address and logic signature in the .env file.
-   ```
-   ESCROW_ADDRESS = <insert-escrow-address>
-   ESCROW_LOGIC_SIGNATURE = <insert-logic-signature>
-   ```   
- - Fund the escrow account with ALGOs to opt-in to stateful smart contract  
+### Opt-in the user to stateful contract
+User must be opted-in, to enable interacting with the contract. This allows a contract to some store data in the user's account. The deposit info and details regarding locked tokens are stored in local state of the user.
 
 
-### Opt-in escrow account to stateful smart contract
-After funding the escrow account,
- - Run the following command to opt in to the stateful contract
-   ```
-   node deploy.js escrow_optin
-   ```
+### Lock the tokens in the contract
+This is a group txn:
+ - First txn is an app call, arguments must include the timestamp when the tokens can be unlocked and a deposit id for uniqueness
+ - Second txn is an axfer txn, the user transfers the tokens to be locked to the stateful contract's address
+ - Third txn is a payment txn, must be only be sent for the very first time that a unique or new ASA ID is locked in the contract. This is to cover the minimum balance for holding an ASA (0.1 Algo) and for the inner txn that opts-in the contract to the ASA (0.001 Algo)
 
+ ```
+ python3 tests/deposit_test.py
+ ```
 
-### Set local state of escrow account
-- To intialise the escrow account, the local state has to be set. Run the following command to set up the escrow. 
-   ```
-   node deploy.js set_escrow
-   ```
+ ### Withdraw the token in the contract
+ Also a group txn:
+ - First txn is an app call, arguements must include unlock timestamp, depsoit id, deposited token id and deposited token amount
+ - Second txn is a payment txn to cover txn fees for the inner txn that sends the locked tokens back to the user
+
+ ```
+ python3 tests/withdraw_test.py
+ ```
+
+ ### Additional Functions
+ - Ability to extend the locked-in period
+ - Transfer the ownership of the token lock to a different address
+ - The new address must then claim the ownership in an group txn
+
+ Refer the test files to find details about building the group txns for these functions

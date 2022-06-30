@@ -5,6 +5,7 @@ load_dotenv()
 from algosdk.v2client import algod, indexer
 from algosdk import mnemonic, account, encoding
 from algosdk.future import transaction
+import algosdk
 
 ALGOD_ENDPOINT = os.getenv('ALGOD_ENDPOINT')
 ALGOD_TOKEN = os.getenv('ALGOD_TOKEN')
@@ -15,26 +16,15 @@ TEST_ACCOUNT_MNEMONICS = os.getenv('TEST_ACCOUNT_MNEMONICS')
 TEST_ACCOUNT_PRIVATE_KEY = mnemonic.to_private_key(TEST_ACCOUNT_MNEMONICS)
 TEST_ACCOUNT_ADDRESS = account.address_from_private_key(TEST_ACCOUNT_PRIVATE_KEY)
 
-DEV_ACCOUNT_MNEMONICS = os.getenv('DEV_ACCOUNT_MNEMONICS')
-DEVELOPER_ACCOUNT_PRIVATE_KEY = mnemonic.to_private_key(DEV_ACCOUNT_MNEMONICS)
-DEVELOPER_ACCOUNT_ADDRESS = account.address_from_private_key(DEVELOPER_ACCOUNT_PRIVATE_KEY)
-
-OTHER_ACCOUNT_MNEMONICS = os.getenv('OTHER_ACCOUNT_MNEMONICS')
-OTHER_ACCOUNT_PRIVATE_KEY = mnemonic.to_private_key(OTHER_ACCOUNT_MNEMONICS)
-OTHER_ACCOUNT_ADDRESS = account.address_from_private_key(OTHER_ACCOUNT_PRIVATE_KEY)
-
-ESCROW_LOGICSIG = os.getenv('ESCROW_LOGICSIG')
-ESCROW_ADDRESS = os.getenv('ESCROW_ADDRESS')
-
 STATE_MANAGER_INDEX = int(os.getenv('STATE_MANAGER_INDEX'))
+STATE_MANAGER_ADDRESS = algosdk.logic.get_application_address(STATE_MANAGER_INDEX)
 TEST_TOKEN_INDEX = int(os.getenv('TEST_TOKEN_INDEX'))
 
 
-TEST_TOKEN_LOCK_AMOUNT = 700
-TEST_DEPOSIT_ID = 7
-KEY1 = OTHER_ACCOUNT_ADDRESS + str(TEST_DEPOSIT_ID)
+TEST_TOKEN_LOCK_AMOUNT = 200 * 10**6
+TEST_DEPOSIT_ID = 12
 NOTE = 'Withdraw' + '-' + str(TEST_DEPOSIT_ID) 
-TEST_TOKEN_TIMESTAMP = 1631597497
+TEST_TOKEN_TIMESTAMP = 1656607445
 
 algod_client = algod.AlgodClient(ALGOD_TOKEN, ALGOD_ENDPOINT, headers={
   "x-api-key": ALGOD_TOKEN
@@ -68,13 +58,12 @@ def withdraw_tokens():
 
   encoded_app_args = [
     bytes("W", "utf-8"),
-    (TEST_DEPOSIT_ID).to_bytes(8, 'big'),
     (TEST_TOKEN_TIMESTAMP).to_bytes(8, 'big'),
+    (TEST_DEPOSIT_ID).to_bytes(8, 'big'),
+    (TEST_TOKEN_INDEX).to_bytes(8, 'big'),
+    (TEST_TOKEN_LOCK_AMOUNT).to_bytes(8, 'big')
   ]
 
-   # Make LogicSig
-  program = base64.b64decode(ESCROW_LOGICSIG)
-  lsig = transaction.LogicSig(program)
 
   # Transaction to State manager
   txn_1 = transaction.ApplicationCallTxn(
@@ -82,18 +71,15 @@ def withdraw_tokens():
     sp=algod_client.suggested_params(),
     index=STATE_MANAGER_INDEX,
     on_complete=transaction.OnComplete.NoOpOC,
-    accounts=[ESCROW_ADDRESS],
+    foreign_assets=[TEST_TOKEN_INDEX],
     app_args=encoded_app_args,
   )
 
-   # Transaction to unlock Tokens from Escrow
-  txn_2 = transaction.AssetTransferTxn(
-    sender=ESCROW_ADDRESS,
+  txn_2 = transaction.PaymentTxn(
+    sender=TEST_ACCOUNT_ADDRESS,
     sp=algod_client.suggested_params(),
-    receiver=TEST_ACCOUNT_ADDRESS,
-    amt=TEST_TOKEN_LOCK_AMOUNT,
-    index=TEST_TOKEN_INDEX,
-    note = NOTE.encode()
+    receiver=STATE_MANAGER_ADDRESS,
+    amt=1000
   )
 
 
@@ -104,7 +90,7 @@ def withdraw_tokens():
 
   # Sign transactions
   stxn_1 = txn_1.sign(TEST_ACCOUNT_PRIVATE_KEY)
-  stxn_2 = transaction.LogicSigTransaction(txn_2, lsig)
+  stxn_2 = txn_2.sign(TEST_ACCOUNT_PRIVATE_KEY)
 
   # Broadcast the transactions
   signed_txns = [stxn_1, stxn_2]
@@ -120,4 +106,3 @@ def withdraw_tokens():
 if __name__ == "__main__":
   withdraw_tokens()
   read_state(TEST_ACCOUNT_ADDRESS)
-

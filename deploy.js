@@ -71,14 +71,13 @@ async function waitForConfirmation(txId) {
   };
 
 /**
-   * Function to get bytes array of base64 string
-   * @param base64string 
-   * @returns bytesArray
-   */  
+ * Function to get bytes array of base64 string
+ * @param base64string 
+ * @returns bytesArray
+ */ 
 async function _base64ToArrayBuffer(b64) {
     var binary_string = atob(b64);
     var len = binary_string.length;
-    debugger
     var bytes = new Uint8Array(len);
     for (var i = 0; i < len; i++) {
       bytes[i] = binary_string.charCodeAt(i);
@@ -87,10 +86,10 @@ async function _base64ToArrayBuffer(b64) {
   }  
 
 /**
-   * Function to sign txn by multiple parties
-   * @param txnObject
-   * @returns signedTxn
-   */  
+ * Function to sign txn by multiple parties
+ * @param txnObject
+ * @returns signedTxn
+ */  
 async function multisignTxn(txn){
     const mparams = {
         version: 1,
@@ -106,11 +105,11 @@ async function multisignTxn(txn){
 }
 
 /**
-   * Function to deploy stateful contract to network
-   * @param approvalProgram compiled Approval program
-   * @param clearProgram compiled clear program
-   * @returns contractId
-   */
+ * Function to deploy stateful contract to network
+ * @param approvalProgram compiled Approval program
+ * @param clearProgram compiled clear program
+ * @returns contractId
+ */
 async function deployStatefulContract(approvalProgram, clearProgram){
     let sender = process.env.MULTISIG_ACCOUNT;
     let onComplete = algosdk.OnApplicationComplete.NoOpOC;

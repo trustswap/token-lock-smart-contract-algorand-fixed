@@ -2,8 +2,8 @@ const algosdk = require("algosdk");
 
 let algodServer = process.env.ALGOD_ENDPOINT
 let algodToken = {
-    'X-API-Key': process.env.ALGOD_TOKEN
-  };
+  'X-API-Key': process.env.ALGOD_TOKEN
+};
 let algodPort = '';  
 
 let algodClient =  new algosdk.Algodv2(algodToken, algodServer, algodPort);
@@ -22,8 +22,8 @@ for(let i=0; i<mnemonics.length; i++){
 //application state storage schema
 const localInts = 16;
 const localBytes = 0;
-const globalInts = 1;
-const globalBytes = 15;
+const globalInts = 0;
+const globalBytes = 0;
 
 module.exports = {
   localInts,

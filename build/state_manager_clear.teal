@@ -1,6 +1,6 @@
-#pragma version 5
+#pragma version 6
 int 0
-byte "COUNTER"
+byte "COUNT"
 app_local_get
 int 0
 ==

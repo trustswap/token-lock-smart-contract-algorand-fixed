@@ -1,0 +1,5 @@
+.env
+node_modules
+v-env
+__pycache__
+__init__.py

@@ -1,3 +1,4 @@
+from email.mime import application
 import os
 import base64
 import time
@@ -25,8 +26,8 @@ DEVELOPER_ACCOUNT_ADDRESS = account.address_from_private_key(DEVELOPER_ACCOUNT_P
 TEST_TOKEN_ASSET_NAME = 'Rizzy'
 TEST_TOKEN_UNIT_NAME = 'RZ'
 
-manager_app_id = 80819571 #int(os.getenv('STATE_MANAGER_INDEX'))
-token_id = 81856717 #int(os.getenv('TEST_TOKEN_INDEX'))
+manager_app_id = int(os.getenv('STATE_MANAGER_INDEX'))
+token_id = int(os.getenv('TEST_TOKEN_INDEX'))
 
 algod_client = algod.AlgodClient(ALGOD_TOKEN, ALGOD_ENDPOINT, headers={
     "x-api-key": ALGOD_TOKEN})
@@ -67,14 +68,14 @@ def compile_state_manager():
     print("Compiling application...")
 
     manager_approve_teal_code = compileTeal(
-        state_manager.approval_program(), Mode.Application)
+        state_manager.approval_program(), Mode.Application, version=6)
     compile_response = algod_client.compile(manager_approve_teal_code)
     manager_approve_code = base64.b64decode(compile_response['result'])
     MANAGER_APPROVE_BYTECODE_LEN = len(manager_approve_code)
     MANAGER_APPROVE_ADDRESS = compile_response['hash']
 
     manager_clear_teal_code = compileTeal(
-        state_manager.clear_program(), Mode.Application)
+        state_manager.clear_program(), Mode.Application, version=6)
     compile_response = algod_client.compile(manager_clear_teal_code)
     manager_clear_code = base64.b64decode(compile_response['result'])
     MANAGER_CLEAR_BYTECODE_LEN = len(manager_clear_code)
@@ -97,7 +98,7 @@ def deploy_state_manager(manager_approve_code, manager_clear_code):
         on_complete=transaction.OnComplete.NoOpOC,
         approval_program=manager_approve_code,
         clear_program=manager_clear_code,
-        global_schema=transaction.StateSchema(num_uints=1, num_byte_slices=15),
+        global_schema=transaction.StateSchema(num_uints=0, num_byte_slices=0),
         local_schema=transaction.StateSchema(num_uints=16, num_byte_slices=0),
     ).sign(DEVELOPER_ACCOUNT_PRIVATE_KEY)
     tx_id = algod_client.send_transaction(create_manager_transaction)
@@ -109,6 +110,29 @@ def deploy_state_manager(manager_approve_code, manager_clear_code):
     print()
 
     return manager_app_id
+
+
+def update_state_manager(manager_approve_code, manager_clear_code, appIndex):
+    print("Updating exchange state manager application...")
+
+    update_manager_tx = transaction.ApplicationUpdateTxn(
+        sender=DEVELOPER_ACCOUNT_ADDRESS,
+        sp=algod_client.suggested_params(),
+        index=appIndex,
+        approval_program=manager_approve_code,
+        clear_program=manager_clear_code
+    ).sign(DEVELOPER_ACCOUNT_PRIVATE_KEY)
+
+    tx_id = algod_client.send_transaction(update_manager_tx)
+    manager_app_id = wait_for_transaction(tx_id)['application-transaction']['application-id']
+    print(
+        f"Exchange State Manager updated with Application ID: {manager_app_id} (Txn ID: https://testnet.algoexplorer.io/tx/{tx_id})"
+    )
+
+    print()
+
+    return manager_app_id
+
 
 
 def create_test_token():
@@ -270,19 +294,24 @@ def transfer_tokens_to_user(token_id):
 if __name__ == "__main__":
     print("Starting deployment process...")
     
-    # manager_approve_code, manager_clear_code = compile_state_manager()
+    manager_approve_code, manager_clear_code = compile_state_manager()
 
     # manager_app_id = deploy_state_manager(
     #     manager_approve_code, manager_clear_code)
 
     # print(f"State Manager App ID = {manager_app_id}")
+
+    manager_app_id = update_state_manager(
+        manager_approve_code, manager_clear_code, manager_app_id)
+
+    print(f"State Manager App ID = {manager_app_id}")
     
     # token_id = create_test_token()
     # opt_user_into_token(token_id)
 
-    escrow_logicsig = compile_escrow_account()
+    # escrow_logicsig = compile_escrow_account()
 
-    opt_escrow_into_token(escrow_logicsig, token_id)
+    # opt_escrow_into_token(escrow_logicsig, token_id)
 
     # opt_user_into_contract(manager_app_id)
 

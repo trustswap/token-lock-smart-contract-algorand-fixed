@@ -8,8 +8,6 @@ const btoa = require('btoa')
 
 let algodClient = config.algodClient
 let maddress = process.env.MULTISIG_ACCOUNT;
-let logicSig = process.env.ESCROW_LOGIC_SIGNATURE
-let escrowAddress = process.env.ESCROW_ADDRESS
 let contractId = parseInt(process.env.STATEFUL_APP_ID)
 
 /**
@@ -169,53 +167,6 @@ async function updateStatefulContract(approvalProgram, clearProgram){
     return appId
 }
 
-/**
-   * Function to opt escrow into stateful contract
-   * @param logicSig logic signature of escrow account
-   * @param escrowAddress address of escrow account
-   * @param contractId stateful contract id
-   * @returns txId
-   */
-async function escrowOptinToContract(logicSig, escrowAddress, contractId){
-    let bdecode = await _base64ToArrayBuffer(logicSig);
-    let lsig = algosdk.logicSigFromByte(bdecode);
-    let params = await algodClient.getTransactionParams().do();
-    let txn = algosdk.makeApplicationOptInTxn(escrowAddress, params, contractId);
-    let txId = txn.txID().toString();
-    let signedTx2 = algosdk.signLogicSigTransactionObject(txn, lsig);
-    await algodClient.sendRawTransaction(signedTx2.blob).do().catch((err)=>{
-        console.log(err)
-      })
-    await waitForConfirmation(txId);
-    return txId
-}
-
-/**
-   * Function to set escrow account's local state
-   * @param escrowAddress address of escrow account
-   * @param contractId stateful contract id
-   * @returns txId
-   */
-async function setEscrow(escrowAddress, contractId){      
-    var enc = new TextEncoder();
-    let params = await algodClient.getTransactionParams().do()
-    let appAccts = [];
-    appAccts.push(escrowAddress);
-    let appArgs = []
-    appArgs.push(enc.encode("S"));
-   
-    let transaction1 = algosdk.makeApplicationNoOpTxn(maddress, params,
-        contractId, appArgs, appAccts, undefined, undefined, undefined);
-
-    let signedTx1 = await multisignTxn(transaction1)
-    let txId = transaction1.txID().toString();
-    await algodClient.sendRawTransaction(signedTx1).do().catch((err)=>{
-      console.log(err)
-    })
-    await waitForConfirmation(txId);
-    return txId
-}
-
 const main = async function(){
     try{
         var args = process.argv.slice(2);
@@ -253,28 +204,6 @@ const main = async function(){
             return appId
         }
 
-        if(args[0] == 'generate_escrow'){
-            let escrowSource = await readFile('./build/escrow_account.teal');
-            console.log(escrowSource)
-            let compilation = await compileProgram(escrowSource);
-            let uintAr = await _base64ToArrayBuffer(compilation);
-            let lsig = new algosdk.LogicSigAccount(uintAr);
-            let escrowAddress  = lsig.address();
-            console.log(`Escrow account : ${escrowAddress}`)
-            let b64encoded = btoa(String.fromCharCode.apply(null, lsig.toByte()));
-            console.log(`Logic signature : ${b64encoded}`)
-            return [escrowAddress, b64encoded]
-        }
-
-        if(args[0] == 'escrow_optin'){
-            let txId = await escrowOptinToContract(logicSig, escrowAddress, contractId)
-            return txId         
-        }
-
-        if(args[0] == 'set_escrow'){
-            let txId = await setEscrow(escrowAddress, contractId)
-            return txId
-        }
 
     } catch(err){
         console.log(err)

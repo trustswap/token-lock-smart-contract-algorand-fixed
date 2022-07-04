@@ -12,14 +12,14 @@ from pyteal import compileTeal, Mode
 from contracts import state_manager
 
 ALGOD_ENDPOINT = "https://testnet-algorand.api.purestake.io/ps2"
-ALGOD_TOKEN = "Cg6qehffpc37kn9VLLf0eqjRK0R0WGt7giDFIfo5"
+ALGOD_TOKEN = os.getenv('ALGOD_TOKEN')
 INDEXER_ENDPOINT = "https://testnet-algorand.api.purestake.io/idx2"
-INDEXER_TOKEN = "Cg6qehffpc37kn9VLLf0eqjRK0R0WGt7giDFIfo5"
+INDEXER_TOKEN = os.getenv('ALGOD_TOKEN')
 
-TEST_ACCOUNT_MNEMONICS = "vital cloud master govern muscle add silver dial party inner main forest found cluster code current mirror have cool toddler grow viable minor abstract arena" # os.getenv('TEST_ACCOUNT_MNEMONICS')
+TEST_ACCOUNT_MNEMONICS = os.getenv('TEST_ACCOUNT_MNEMONICS')
 TEST_ACCOUNT_PRIVATE_KEY = mnemonic.to_private_key(TEST_ACCOUNT_MNEMONICS)
 TEST_ACCOUNT_ADDRESS = account.address_from_private_key(TEST_ACCOUNT_PRIVATE_KEY)
-DEV_ACCOUNT_MNEMONICS = "prosper type goddess input turn ripple butter upgrade island rhythm jelly globe blur lava recall easily effort column nurse strategy write animal circle abstract history" #os.getenv('DEV_ACCOUNT_MNEMONICS')
+DEV_ACCOUNT_MNEMONICS = os.getenv('DEV_ACCOUNT_MNEMONICS')
 DEVELOPER_ACCOUNT_PRIVATE_KEY = mnemonic.to_private_key(DEV_ACCOUNT_MNEMONICS)
 DEVELOPER_ACCOUNT_ADDRESS = account.address_from_private_key(DEVELOPER_ACCOUNT_PRIVATE_KEY)
 
@@ -41,28 +41,6 @@ def wait_for_transaction(transaction_id):
     result = indexer_client.search_transactions(txid=transaction_id)
     assert len(result['transactions']) == 1, result
     return result['transactions'][0]
-
-def compile_escrow_account():
-    from contracts import escrow_account
-
-    print("Compiling exchange escrow logicsig...")
-    escrow_logicsig_teal_code = escrow_account.logicsig()
-    compile_response = algod_client.compile(escrow_logicsig_teal_code)
-    escrow_logicsig = compile_response['result']
-    escrow_logicsig_bytes = base64.b64decode(escrow_logicsig)
-    ESCROW_BYTECODE_LEN = len(escrow_logicsig_bytes)
-    ESCROW_ADDRESS = compile_response['hash']
-    print(
-        f"Escrow | {ESCROW_BYTECODE_LEN}/1000 bytes ({ESCROW_ADDRESS})")
-
-    print(f"Escrow logicsig compiled with address {ESCROW_ADDRESS} and logic signature")
-    print()
-    print(escrow_logicsig)
-
-    print()
-
-    return escrow_logicsig
-
 
 def compile_state_manager():
     print("Compiling application...")
@@ -134,7 +112,6 @@ def update_state_manager(manager_approve_code, manager_clear_code, appIndex):
     return manager_app_id
 
 
-
 def create_test_token():
     print(
         f"Deploying token {TEST_TOKEN_ASSET_NAME} ({TEST_TOKEN_UNIT_NAME})"
@@ -165,61 +142,6 @@ def create_test_token():
     print()
 
     return token_id
-
-def opt_escrow_into_token(escrow_logicsig, token_idx):
-    print(
-        f"Opting Escrow into Token with Asset ID: {token_idx}..."
-    )
-    program = base64.b64decode(escrow_logicsig)
-
-    lsig = transaction.LogicSig(program)
-
-    txn = transaction.AssetTransferTxn(
-        sender=lsig.address(),
-        sp=algod_client.suggested_params(),
-        receiver=lsig.address(),
-        amt=0,
-        index=token_idx,
-    )
-
-    lsig_txn = transaction.LogicSigTransaction(txn, lsig)
-
-    tx_id = algod_client.send_transaction(lsig_txn)
-
-    wait_for_transaction(tx_id)
-
-    print(
-        f"Opted Escrow into Token with Asset ID: {token_idx} successfully! Tx ID: https://testnet.algoexplorer.io/tx/{tx_id}"
-    )
-
-    print()
-
-
-def opt_escrow_into_manager(escrow_logicsig, manager_app_id):
-    print("Opting Escrow into Manager contract...")
-
-    program = base64.b64decode(escrow_logicsig)
-
-    lsig = transaction.LogicSig(program)
-
-    txn = transaction.ApplicationOptInTxn(
-        sender=lsig.address(),
-        sp=algod_client.suggested_params(),
-        index=manager_app_id
-    )
-
-    lsig_txn = transaction.LogicSigTransaction(txn, lsig)
-
-    tx_id = algod_client.send_transaction(lsig_txn)
-
-    wait_for_transaction(tx_id)
-
-    print(
-        f"Opted Escrow into Manager contract successfully! Tx ID: https://testnet.algoexplorer.io/tx/{tx_id}"
-    )
-
-    print()
-
 
 def opt_user_into_contract(app_id):
     print(
@@ -308,15 +230,8 @@ if __name__ == "__main__":
     
     # token_id = create_test_token()
     # opt_user_into_token(token_id)
-
-    # escrow_logicsig = compile_escrow_account()
-
-    # opt_escrow_into_token(escrow_logicsig, token_id)
+    # transfer_tokens_to_user(token_id)
 
     # opt_user_into_contract(manager_app_id)
-
-    # opt_escrow_into_manager(escrow_logicsig, manager_app_id)
-
-    # transfer_tokens_to_user(token_id)
 
     print("Deployment completed successfully!")

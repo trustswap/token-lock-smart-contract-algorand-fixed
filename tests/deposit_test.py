@@ -9,6 +9,7 @@ from algosdk.future import transaction
 import struct
 import ctypes
 import algosdk
+import time
 
 ALGOD_ENDPOINT = os.getenv('ALGOD_ENDPOINT')
 ALGOD_TOKEN = os.getenv('ALGOD_TOKEN')
@@ -27,7 +28,7 @@ STATE_MANAGER_ADDRESS = algosdk.logic.get_application_address(STATE_MANAGER_INDE
 TEST_TOKEN_INDEX = int(os.getenv('TEST_TOKEN_INDEX'))
 
 TEST_TOKEN_LOCK_AMOUNT = 200 * 10**6
-TEST_TIME_PERIOD = 1656607445
+TEST_TIME_PERIOD = int(time.time())+3600;
 TEST_DEPOSIT_ID = 12
 
 NOTE = 'Deposit' + '-' + str(TEST_DEPOSIT_ID) + "-" + str(TEST_TIME_PERIOD)

@@ -1,4 +1,3 @@
-
 import os
 import base64
 from dotenv import load_dotenv
@@ -7,6 +6,10 @@ from algosdk.v2client import algod, indexer
 from algosdk import mnemonic, account
 from algosdk.future import transaction
 import algosdk
+
+# NOTE: separate the flow for the first time a unique token is locked
+# algorand requires contracts or users to opt-in to a token, before it can recieve and hereby hold it
+# the user making the very first deposit of a unique token, has to pay the charge so that our contract csn hold the ASA
 
 ALGOD_ENDPOINT = os.getenv('ALGOD_ENDPOINT')
 ALGOD_TOKEN = os.getenv('ALGOD_TOKEN')
@@ -73,7 +76,7 @@ def lock_tokens():
     note = NOTE.encode()
   )
 
-  # Transaction to lock Tokens in the contract
+   # Transaction to lock Tokens in contract
   txn_2 = transaction.AssetTransferTxn(
     sender=TEST_ACCOUNT_ADDRESS,
     sp=algod_client.suggested_params(),
@@ -83,18 +86,26 @@ def lock_tokens():
     note = NOTE.encode()
   )
 
+  txn_3 = transaction.PaymentTxn(
+    sender=TEST_ACCOUNT_ADDRESS,
+    sp=algod_client.suggested_params(),
+    receiver=STATE_MANAGER_ADDRESS,
+    amt=101000
+  )
 
   # Get group ID and assign to transactions
-  gid = transaction.calculate_group_id([txn_1, txn_2])
+  gid = transaction.calculate_group_id([txn_1, txn_2, txn_3])
   txn_1.group = gid
   txn_2.group = gid
+  txn_3.group = gid
 
   # Sign transactions
   stxn_1 = txn_1.sign(TEST_ACCOUNT_PRIVATE_KEY)
   stxn_2 = txn_2.sign(TEST_ACCOUNT_PRIVATE_KEY)
+  stxn_3 = txn_3.sign(TEST_ACCOUNT_PRIVATE_KEY)
 
   # Broadcast the transactions
-  signed_txns = [stxn_1, stxn_2]
+  signed_txns = [stxn_1, stxn_2, stxn_3]
   tx_id = algod_client.send_transactions(signed_txns)
 
   # Wait for transaction
@@ -105,6 +116,7 @@ def lock_tokens():
   print()
 
 if __name__ == "__main__":
+  # print(STATE_MANAGER_ADDRESS)
   print(TEST_ACCOUNT_ADDRESS)
   lock_tokens()
   read_state(TEST_ACCOUNT_ADDRESS)

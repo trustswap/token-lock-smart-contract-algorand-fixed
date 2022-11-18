@@ -24,7 +24,7 @@ TEST_TOKEN_INDEX = int(os.getenv('TEST_TOKEN_INDEX'))
 TEST_TOKEN_LOCK_AMOUNT = 200 * 10**6
 TEST_DEPOSIT_ID = 12
 NOTE = 'Withdraw' + '-' + str(TEST_DEPOSIT_ID) 
-TEST_TOKEN_TIMESTAMP = 1656607445
+TEST_LOCK_TIMESTAMP = 1656607445
 
 algod_client = algod.AlgodClient(ALGOD_TOKEN, ALGOD_ENDPOINT, headers={
   "x-api-key": ALGOD_TOKEN
@@ -58,7 +58,7 @@ def withdraw_tokens():
 
   encoded_app_args = [
     bytes("W", "utf-8"),
-    (TEST_TOKEN_TIMESTAMP).to_bytes(8, 'big'),
+    (TEST_LOCK_TIMESTAMP).to_bytes(8, 'big'),
     (TEST_DEPOSIT_ID).to_bytes(8, 'big'),
     (TEST_TOKEN_INDEX).to_bytes(8, 'big'),
     (TEST_TOKEN_LOCK_AMOUNT).to_bytes(8, 'big')

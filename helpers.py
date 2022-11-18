@@ -1,13 +1,11 @@
-from email.mime import application
 import os
 import base64
-import time
 from dotenv import load_dotenv
 load_dotenv()
 
 from algosdk.v2client import algod, indexer
 from algosdk.future import transaction
-from algosdk import encoding, account, mnemonic, error
+from algosdk import account, mnemonic
 from pyteal import compileTeal, Mode
 from contracts import state_manager
 
@@ -73,7 +71,7 @@ def compile_state_manager():
     MANAGER_CLEAR_ADDRESS = compile_response['hash']
 
     print(
-        f"State Manager | Approval: {MANAGER_APPROVE_BYTECODE_LEN}/1024 bytes ({MANAGER_APPROVE_ADDRESS}) | Clear: {MANAGER_CLEAR_BYTECODE_LEN}/1024 bytes ({MANAGER_CLEAR_ADDRESS})")
+        f"State Manager | Approval: {MANAGER_APPROVE_BYTECODE_LEN} bytes ({MANAGER_APPROVE_ADDRESS}) | Clear: {MANAGER_CLEAR_BYTECODE_LEN} bytes ({MANAGER_CLEAR_ADDRESS})")
 
     print()
 

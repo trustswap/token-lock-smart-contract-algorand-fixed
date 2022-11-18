@@ -23,16 +23,13 @@ OTHER_ACCOUNT_MNEMONICS = os.getenv('OTHER_ACCOUNT_MNEMONICS')
 OTHER_ACCOUNT_PRIVATE_KEY = mnemonic.to_private_key(OTHER_ACCOUNT_MNEMONICS)
 OTHER_ACCOUNT_ADDRESS = account.address_from_private_key(OTHER_ACCOUNT_PRIVATE_KEY)
 
-ESCROW_LOGICSIG = os.getenv('ESCROW_LOGICSIG')
-ESCROW_ADDRESS = os.getenv('ESCROW_ADDRESS')
-
 STATE_MANAGER_INDEX = int(os.getenv('STATE_MANAGER_INDEX'))
 TEST_TOKEN_INDEX = int(os.getenv('TEST_TOKEN_INDEX'))
 
 TEST_TOKEN_LOCK_AMOUNT = 100
 TEST_DEPOSIT_ID = 1
 KEY1 = TEST_ACCOUNT_ADDRESS + str(TEST_DEPOSIT_ID)
-TEST_TOKEN_TIMESTAMP = 1631599575
+TEST_LOCK_TIMESTAMP = 1631599575
 NOTE = 'TransferLock' + '-' + str(TEST_DEPOSIT_ID) + '-' + OTHER_ACCOUNT_ADDRESS
 
 algod_client = algod.AlgodClient(ALGOD_TOKEN, ALGOD_ENDPOINT, headers={
@@ -75,9 +72,9 @@ def format_state(state):
       formatted_value = base64.b64decode(value['bytes'])
       print(formatted_value)
       print()
-  
 
-def read_global_state(addr, app_id) :   
+
+def read_global_state(addr, app_id) :
     results = algod_client.account_info(addr)
     apps_created = results['created-apps']
     for app in apps_created :
@@ -93,7 +90,7 @@ def transfer_lock_owner():
     (TEST_TOKEN_INDEX).to_bytes(8, 'big'),
     (TEST_DEPOSIT_ID).to_bytes(8, 'big'),
     (TEST_TOKEN_LOCK_AMOUNT).to_bytes(8, 'big'),
-    (TEST_TOKEN_TIMESTAMP).to_bytes(8, 'big'),
+    (TEST_LOCK_TIMESTAMP).to_bytes(8, 'big'),
   ]
 
   # Transaction to State manager

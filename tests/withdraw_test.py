@@ -23,7 +23,7 @@ TEST_TOKEN_INDEX = int(os.getenv('TEST_TOKEN_INDEX'))
 
 TEST_TOKEN_LOCK_AMOUNT = 200 * 10**6
 TEST_DEPOSIT_ID = 12
-NOTE = 'Withdraw' + '-' + str(TEST_DEPOSIT_ID) 
+NOTE = 'Withdraw' + '-' + str(TEST_DEPOSIT_ID)
 TEST_LOCK_TIMESTAMP = 1656607445
 
 algod_client = algod.AlgodClient(ALGOD_TOKEN, ALGOD_ENDPOINT, headers={

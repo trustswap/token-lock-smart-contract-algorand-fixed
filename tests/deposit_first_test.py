@@ -116,7 +116,6 @@ def lock_tokens():
   print()
 
 if __name__ == "__main__":
-  # print(STATE_MANAGER_ADDRESS)
   print(TEST_ACCOUNT_ADDRESS)
   lock_tokens()
   read_state(TEST_ACCOUNT_ADDRESS)

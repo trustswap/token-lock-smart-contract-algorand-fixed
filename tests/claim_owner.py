@@ -3,7 +3,7 @@ import base64
 from dotenv import load_dotenv
 load_dotenv()
 from algosdk.v2client import algod, indexer
-from algosdk import mnemonic, account, encoding
+from algosdk import mnemonic, account
 from algosdk.future import transaction
 
 ALGOD_ENDPOINT = os.getenv('ALGOD_ENDPOINT')
@@ -23,9 +23,6 @@ OTHER_ACCOUNT_MNEMONICS = os.getenv('OTHER_ACCOUNT_MNEMONICS')
 OTHER_ACCOUNT_PRIVATE_KEY = mnemonic.to_private_key(OTHER_ACCOUNT_MNEMONICS)
 OTHER_ACCOUNT_ADDRESS = account.address_from_private_key(OTHER_ACCOUNT_PRIVATE_KEY)
 
-ESCROW_LOGICSIG = os.getenv('ESCROW_LOGICSIG')
-ESCROW_ADDRESS = os.getenv('ESCROW_ADDRESS')
-
 STATE_MANAGER_INDEX = int(os.getenv('STATE_MANAGER_INDEX'))
 TEST_TOKEN_INDEX = int(os.getenv('TEST_TOKEN_INDEX'))
 
@@ -33,10 +30,10 @@ TEST_TOKEN_LOCK_AMOUNT = 100
 TEST_DEPOSIT_ID = 1
 OTHER_DEPOSIT_ID = 1
 TEST_END_ROUND = 1631599575
-TEST_TOKEN_TIMESTAMP = 1631599575
-KEY1 = str(TEST_ACCOUNT_ADDRESS) + str(TEST_DEPOSIT_ID) 
+TEST_LOCK_TIMESTAMP = 1631599575
+KEY1 = str(TEST_ACCOUNT_ADDRESS) + str(TEST_DEPOSIT_ID)
 
-NOTE = 'ClaimLock' + '-' + str(TEST_DEPOSIT_ID) + "-" + str(TEST_ACCOUNT_ADDRESS) 
+NOTE = 'ClaimLock' + '-' + str(TEST_DEPOSIT_ID) + "-" + str(TEST_ACCOUNT_ADDRESS)
 
 algod_client = algod.AlgodClient(ALGOD_TOKEN, ALGOD_ENDPOINT, headers={
   "x-api-key": ALGOD_TOKEN
@@ -79,10 +76,10 @@ def format_state(state):
         formatted[formatted_key] = formatted_value
      else:
         formatted[formatted_key] = value['uint']
-   print(formatted)     
+   print(formatted)
    return formatted
 
-def read_global_state(addr, app_id) :   
+def read_global_state(addr, app_id) :
     results = algod_client.account_info(addr)
     apps_created = results['created-apps']
     for app in apps_created :
@@ -98,7 +95,7 @@ def claim_lock_owner():
     (TEST_DEPOSIT_ID).to_bytes(8, 'big'),
     (TEST_TOKEN_LOCK_AMOUNT).to_bytes(8, 'big'),
     (OTHER_DEPOSIT_ID).to_bytes(8, 'big'),
-    (TEST_TOKEN_TIMESTAMP).to_bytes(8, 'big'),
+    (TEST_LOCK_TIMESTAMP).to_bytes(8, 'big'),
   ]
 
   # Transaction to State manager

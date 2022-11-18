@@ -1,13 +1,11 @@
-from email.mime import application
 import os
 import base64
-import time
 from dotenv import load_dotenv
 load_dotenv()
 
 from algosdk.v2client import algod, indexer
 from algosdk.future import transaction
-from algosdk import encoding, account, mnemonic, error
+from algosdk import account, mnemonic
 from pyteal import compileTeal, Mode
 from contracts import state_manager
 
@@ -35,6 +33,19 @@ indexer_client = indexer.IndexerClient(INDEXER_TOKEN, INDEXER_ENDPOINT, headers=
     "x-api-key": INDEXER_TOKEN})
 
 
+# import three accounts
+private_key_1 = os.getenv('PK1')
+account_1 = os.getenv('ADDR1')
+private_key_2 = os.getenv('PK2')
+account_2 = os.getenv('ADDR2')
+private_key_3 = os.getenv('PK3')
+account_3 = os.getenv('ADDR3')
+
+# create a multisig account
+version = 1  # multisig version
+threshold = 2  # how many signatures are necessary
+msig = transaction.Multisig(version, threshold, [account_1, account_2, account_3])
+
 def wait_for_transaction(transaction_id):
     suggested_params = algod_client.suggested_params()
     algod_client.status_after_block(suggested_params.first + 4)
@@ -60,7 +71,7 @@ def compile_state_manager():
     MANAGER_CLEAR_ADDRESS = compile_response['hash']
 
     print(
-        f"State Manager | Approval: {MANAGER_APPROVE_BYTECODE_LEN}/1024 bytes ({MANAGER_APPROVE_ADDRESS}) | Clear: {MANAGER_CLEAR_BYTECODE_LEN}/1024 bytes ({MANAGER_CLEAR_ADDRESS})")
+        f"State Manager | Approval: {MANAGER_APPROVE_BYTECODE_LEN} bytes ({MANAGER_APPROVE_ADDRESS}) | Clear: {MANAGER_CLEAR_BYTECODE_LEN} bytes ({MANAGER_CLEAR_ADDRESS})")
 
     print()
 
@@ -70,16 +81,23 @@ def compile_state_manager():
 def deploy_state_manager(manager_approve_code, manager_clear_code):
     print("Deploying state manager application...")
 
-    create_manager_transaction = transaction.ApplicationCreateTxn(
-        sender=DEVELOPER_ACCOUNT_ADDRESS,
+    create_manager_tx = transaction.ApplicationCreateTxn(
+        sender=msig.address(),
         sp=algod_client.suggested_params(),
         on_complete=transaction.OnComplete.NoOpOC,
         approval_program=manager_approve_code,
         clear_program=manager_clear_code,
         global_schema=transaction.StateSchema(num_uints=0, num_byte_slices=0),
         local_schema=transaction.StateSchema(num_uints=16, num_byte_slices=0),
-    ).sign(DEVELOPER_ACCOUNT_PRIVATE_KEY)
-    tx_id = algod_client.send_transaction(create_manager_transaction)
+    )
+
+    mtx = transaction.MultisigTransaction(create_manager_tx, msig)
+
+    # sign the transaction
+    mtx.sign(private_key_1)
+    mtx.sign(private_key_2)
+
+    tx_id = algod_client.send_transaction(mtx)
     manager_app_id = wait_for_transaction(tx_id)['created-application-index']
     print(
         f"State Manager deployed with Application ID: {manager_app_id} (Txn ID: https://testnet.algoexplorer.io/tx/{tx_id})"
@@ -91,17 +109,23 @@ def deploy_state_manager(manager_approve_code, manager_clear_code):
 
 
 def update_state_manager(manager_approve_code, manager_clear_code, appIndex):
-    print("Updating exchange state manager application...")
+    print(f"Updating exchange state manager application: {appIndex}")
 
     update_manager_tx = transaction.ApplicationUpdateTxn(
-        sender=DEVELOPER_ACCOUNT_ADDRESS,
+        sender=msig.address(),
         sp=algod_client.suggested_params(),
         index=appIndex,
         approval_program=manager_approve_code,
         clear_program=manager_clear_code
-    ).sign(DEVELOPER_ACCOUNT_PRIVATE_KEY)
+    )
 
-    tx_id = algod_client.send_transaction(update_manager_tx)
+    mtx = transaction.MultisigTransaction(update_manager_tx, msig)
+
+    # sign the transaction
+    mtx.sign(private_key_1)
+    mtx.sign(private_key_2)
+
+    tx_id = algod_client.send_transaction(mtx)
     manager_app_id = wait_for_transaction(tx_id)['application-transaction']['application-id']
     print(
         f"Exchange State Manager updated with Application ID: {manager_app_id} (Txn ID: https://testnet.algoexplorer.io/tx/{tx_id})"
@@ -110,6 +134,7 @@ def update_state_manager(manager_approve_code, manager_clear_code, appIndex):
     print()
 
     return manager_app_id
+
 
 
 def create_test_token():
@@ -142,6 +167,7 @@ def create_test_token():
     print()
 
     return token_id
+
 
 def opt_user_into_contract(app_id):
     print(
@@ -221,17 +247,15 @@ if __name__ == "__main__":
     # manager_app_id = deploy_state_manager(
     #     manager_approve_code, manager_clear_code)
 
-    # print(f"State Manager App ID = {manager_app_id}")
-
     manager_app_id = update_state_manager(
         manager_approve_code, manager_clear_code, manager_app_id)
 
     print(f"State Manager App ID = {manager_app_id}")
     
     # token_id = create_test_token()
-    # opt_user_into_token(token_id)
-    # transfer_tokens_to_user(token_id)
 
+    # opt_user_into_token(token_id)
     # opt_user_into_contract(manager_app_id)
+    # transfer_tokens_to_user(token_id)
 
     print("Deployment completed successfully!")

@@ -5,6 +5,11 @@ load_dotenv()
 from algosdk.v2client import algod, indexer
 from algosdk import mnemonic, account
 from algosdk.future import transaction
+import algosdk
+
+# NOTE: separate the flow for the first time a unique token is locked
+# algorand requires contracts or users to opt-in to a token, before it can recieve and hereby hold it
+# the user making the very first deposit of a unique token, has to pay the charge so that our contract csn hold the ASA
 
 ALGOD_ENDPOINT = os.getenv('ALGOD_ENDPOINT')
 ALGOD_TOKEN = os.getenv('ALGOD_TOKEN')
@@ -15,24 +20,15 @@ TEST_ACCOUNT_MNEMONICS = os.getenv('TEST_ACCOUNT_MNEMONICS')
 TEST_ACCOUNT_PRIVATE_KEY = mnemonic.to_private_key(TEST_ACCOUNT_MNEMONICS)
 TEST_ACCOUNT_ADDRESS = account.address_from_private_key(TEST_ACCOUNT_PRIVATE_KEY)
 
-
-DEV_ACCOUNT_MNEMONICS = os.getenv('DEV_ACCOUNT_MNEMONICS')
-DEVELOPER_ACCOUNT_PRIVATE_KEY = mnemonic.to_private_key(DEV_ACCOUNT_MNEMONICS)
-DEVELOPER_ACCOUNT_ADDRESS = account.address_from_private_key(DEVELOPER_ACCOUNT_PRIVATE_KEY)
-
 STATE_MANAGER_INDEX = int(os.getenv('STATE_MANAGER_INDEX'))
+STATE_MANAGER_ADDRESS = algosdk.logic.get_application_address(STATE_MANAGER_INDEX)
 TEST_TOKEN_INDEX = int(os.getenv('TEST_TOKEN_INDEX'))
 
-OTHER_ACCOUNT_MNEMONICS = os.getenv('OTHER_ACCOUNT_MNEMONICS')
-OTHER_ACCOUNT_PRIVATE_KEY = mnemonic.to_private_key(OTHER_ACCOUNT_MNEMONICS)
-OTHER_ACCOUNT_ADDRESS = account.address_from_private_key(OTHER_ACCOUNT_PRIVATE_KEY)
+TEST_TOKEN_LOCK_AMOUNT = 200 * 10**6
+TEST_UNLOCK_TIMESTAMP = 1656607445
+TEST_DEPOSIT_ID = 12
 
-TEST_TOKEN_LOCK_AMOUNT = 100
-TEST_NEW_TIME_PERIOD = 1851596251
-TEST_DEPOSIT_ID = 1
-KEY1 = TEST_ACCOUNT_ADDRESS + str(TEST_DEPOSIT_ID)
-NOTE = 'UpdateTime' + '-' + str(TEST_DEPOSIT_ID) + "-" + str(TEST_NEW_TIME_PERIOD)
-TEST_LOCK_TIMESTAMP = 1631601265
+NOTE = 'Deposit' + '-' + str(TEST_DEPOSIT_ID) + "-" + str(TEST_UNLOCK_TIMESTAMP)
 
 algod_client = algod.AlgodClient(ALGOD_TOKEN, ALGOD_ENDPOINT, headers={
   "x-api-key": ALGOD_TOKEN
@@ -59,15 +55,13 @@ def read_state(address):
         print(kvs['value'])
         print(kvs['key'])
 
-def update_lock_period():
+def lock_tokens():
+  print("Building atomic transaction group...")
 
   encoded_app_args = [
-    bytes("U", "utf-8"),
-    (TEST_TOKEN_INDEX).to_bytes(8, 'big'),
+    bytes("D", "utf-8"),
+    (TEST_UNLOCK_TIMESTAMP).to_bytes(8, 'big'),
     (TEST_DEPOSIT_ID).to_bytes(8, 'big'),
-    (TEST_TOKEN_LOCK_AMOUNT).to_bytes(8, 'big'),
-    (TEST_NEW_TIME_PERIOD).to_bytes(8, 'big'),
-    (TEST_LOCK_TIMESTAMP).to_bytes(8, 'big'),
   ]
 
   # Transaction to State manager
@@ -76,23 +70,52 @@ def update_lock_period():
     sp=algod_client.suggested_params(),
     index=STATE_MANAGER_INDEX,
     on_complete=transaction.OnComplete.NoOpOC,
-    accounts=[],
+    accounts=[STATE_MANAGER_ADDRESS],
+    foreign_assets=[TEST_TOKEN_INDEX],
     app_args=encoded_app_args,
     note = NOTE.encode()
   )
 
-  # Sign transaction
+   # Transaction to lock Tokens in contract
+  txn_2 = transaction.AssetTransferTxn(
+    sender=TEST_ACCOUNT_ADDRESS,
+    sp=algod_client.suggested_params(),
+    receiver=STATE_MANAGER_ADDRESS,
+    amt=TEST_TOKEN_LOCK_AMOUNT,
+    index=TEST_TOKEN_INDEX,
+    note = NOTE.encode()
+  )
+
+  txn_3 = transaction.PaymentTxn(
+    sender=TEST_ACCOUNT_ADDRESS,
+    sp=algod_client.suggested_params(),
+    receiver=STATE_MANAGER_ADDRESS,
+    amt=101000
+  )
+
+  # Get group ID and assign to transactions
+  gid = transaction.calculate_group_id([txn_1, txn_2, txn_3])
+  txn_1.group = gid
+  txn_2.group = gid
+  txn_3.group = gid
+
+  # Sign transactions
   stxn_1 = txn_1.sign(TEST_ACCOUNT_PRIVATE_KEY)
+  stxn_2 = txn_2.sign(TEST_ACCOUNT_PRIVATE_KEY)
+  stxn_3 = txn_3.sign(TEST_ACCOUNT_PRIVATE_KEY)
 
-  tx_id = algod_client.send_transaction(stxn_1)
+  # Broadcast the transactions
+  signed_txns = [stxn_1, stxn_2, stxn_3]
+  tx_id = algod_client.send_transactions(signed_txns)
 
+  # Wait for transaction
   wait_for_transaction(tx_id)
 
-  print(f"Time period increased successfully! Tx ID: https://testnet.algoexplorer.io/tx/{tx_id}")
+  print(f"Tokens locked successfully! Tx ID: https://testnet.algoexplorer.io/tx/{tx_id}")
 
   print()
 
 if __name__ == "__main__":
-  update_lock_period()
+  print(TEST_ACCOUNT_ADDRESS)
+  lock_tokens()
   read_state(TEST_ACCOUNT_ADDRESS)
-

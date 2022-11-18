@@ -1,6 +1,5 @@
 from pyteal import *
 
-TXN_TYPE_SET_ESCROW = Bytes("S")
 TXN_TYPE_DEPOSIT_TOKENS = Bytes("D")
 TXN_TYPE_WITHDRAW_TOKENS = Bytes("W")
 TXN_TYPE_UPDATE_LOCK_PERIOD = Bytes("U")
@@ -13,7 +12,7 @@ def approval_program():
 
     # Declaring Scratch Variables
     scratchvar_user_deposit_state = ScratchVar(TealType.uint64)
-    scratchvar_time_period = ScratchVar(TealType.uint64)
+    scratchvar_unlock_timestamp = ScratchVar(TealType.uint64)
     scratchvar_key = ScratchVar(TealType.bytes)
     scratchvar_new_key = ScratchVar(TealType.bytes)
     scratchvar_transfer_key = ScratchVar(TealType.bytes)
@@ -119,11 +118,11 @@ def approval_program():
         #txn-app-arg[1] = unlockTimestamp
         #txn-app-arg[2] = depositId
 
-        #Key - 'tokenId depositId amount lockTimestamp'
+        #Key - 'LOCK tokenId depositId amount lockTimestamp'
         #Value - unlockTimestamp
 
         scratchvar_key.store(Bytes('LOCK')),
-        scratchvar_key.store(Concat(scratchvar_key.load(), Itob(Gtxn[1].xfer_asset()), Gtxn[0].application_args[2], Itob(Gtxn[1].asset_amount()), Gtxn[0].application_args[1])),
+        scratchvar_key.store(Concat(scratchvar_key.load(), Itob(Gtxn[1].xfer_asset()), Gtxn[0].application_args[2], Itob(Gtxn[1].asset_amount()), Itob(Global.latest_timestamp()))),
         scratchvar_user_deposit_state.store(read_user_local_state(scratchvar_key.load())),
         scratchvar_counter.store(read_user_counter),
 
@@ -184,14 +183,14 @@ def approval_program():
     on_withdraw = Seq([
 
         #txn-app-arg[0] = W
-        #txn-app-arg[1] = unlockTimestamp
+        #txn-app-arg[1] = lockTimestamp
         #txn-app-arg[2] = depositId
         #txn-app-arg[3] = tokenId
         #txn-app-arg[4] = lockedAmount
 
         scratchvar_key.store(Bytes('LOCK')),
         scratchvar_key.store(Concat(scratchvar_key.load(), Gtxn[0].application_args[3], Gtxn[0].application_args[2], Gtxn[0].application_args[4], Gtxn[0].application_args[1])),
-        scratchvar_time_period.store(read_user_local_state(scratchvar_key.load())),
+        scratchvar_unlock_timestamp.store(read_user_local_state(scratchvar_key.load())),
         scratchvar_counter.store(read_user_counter),
 
         Assert(
@@ -202,7 +201,7 @@ def approval_program():
                 Gtxn[0].application_args.length() == Int(5),
 
                 # Must be an existing valid lock 
-                scratchvar_time_period.load() != Int(0),
+                scratchvar_unlock_timestamp.load() != Int(0),
 
                 # User must fund the locker contract with Algos for the inner txn
                 Gtxn[1].type_enum() == TxnType.Payment,
@@ -217,10 +216,10 @@ def approval_program():
                 lock_transfer_status(0, Txn.accounts[0]) == Int(0),
 
                 # Lock details must exist in user's local state
-                scratchvar_time_period.load() != Int(0),
+                scratchvar_unlock_timestamp.load() != Int(0),
 
                 # Lock in period should have elapsed
-                Global.latest_timestamp() > scratchvar_time_period.load(),
+                Global.latest_timestamp() > scratchvar_unlock_timestamp.load(),
 
                 # Txn should not be of type rekeying or asset closing
                 is_zero_address,
@@ -249,7 +248,7 @@ def approval_program():
 
         scratchvar_key.store(Bytes('LOCK')),
         scratchvar_key.store(Concat(scratchvar_key.load(), Gtxn[0].application_args[1], Gtxn[0].application_args[2], Gtxn[0].application_args[3], Gtxn[0].application_args[5])),
-        scratchvar_time_period.store(read_user_local_state(scratchvar_key.load())),
+        scratchvar_unlock_timestamp.store(read_user_local_state(scratchvar_key.load())),
 
         Assert(
             And(
@@ -260,13 +259,13 @@ def approval_program():
                 Gtxn[0].application_args.length() == Int(6),
 
                 #Lock details must exist in user's local state
-                scratchvar_time_period.load() != Int(0),
+                scratchvar_unlock_timestamp.load() != Int(0),
 
                 #Lock transfer must not be in progress
                 lock_transfer_status(0, Txn.accounts[0]) == Int(0),
 
                 #New lock in period should be greater than current period
-                Btoi(Gtxn[0].application_args[4]) > scratchvar_time_period.load(),
+                Btoi(Gtxn[0].application_args[4]) > scratchvar_unlock_timestamp.load(),
 
                 is_zero_address
             )
@@ -290,7 +289,7 @@ def approval_program():
 
         scratchvar_key.store(Bytes('LOCK')),
         scratchvar_key.store(Concat(scratchvar_key.load(), Gtxn[0].application_args[1], Gtxn[0].application_args[2], Gtxn[0].application_args[3], Gtxn[0].application_args[4])),
-        scratchvar_time_period.store(read_user_local_state(scratchvar_key.load())),
+        scratchvar_unlock_timestamp.store(read_user_local_state(scratchvar_key.load())),
         scratchvar_transfer_key.store(Bytes('LOCK')),
         scratchvar_transfer_key.store(Concat(scratchvar_key.load(), Txn.accounts[0], Gtxn[0].application_args[2])),
 
@@ -306,7 +305,7 @@ def approval_program():
                 Txn.accounts[0] != Txn.accounts[1],
 
                 #Lock details must exist in user's local state
-                scratchvar_time_period.load() != Int(0),
+                scratchvar_unlock_timestamp.load() != Int(0),
 
                 #Lock with the same key should not exist in the lock reciever's local state
                 read_other_user_local_state(scratchvar_key.load()) == Int(0),
@@ -336,7 +335,7 @@ def approval_program():
 
         scratchvar_key.store(Bytes('LOCK')),
         scratchvar_key.store(Concat(scratchvar_key.load(), Gtxn[0].application_args[1],  Gtxn[0].application_args[2], Gtxn[0].application_args[3], Gtxn[0].application_args[5])),
-        scratchvar_time_period.store(read_other_user_local_state(scratchvar_key.load())),
+        scratchvar_unlock_timestamp.store(read_other_user_local_state(scratchvar_key.load())),
 
         scratchvar_new_key.store(Bytes('LOCK')),
         scratchvar_new_key.store(Concat(scratchvar_new_key.load(), Gtxn[0].application_args[1], Gtxn[0].application_args[4], Gtxn[0].application_args[3], Gtxn[0].application_args[5])),
@@ -360,7 +359,7 @@ def approval_program():
                 Txn.accounts[0] != Txn.accounts[1],
 
                 #Lock details must exist in original owner's local state
-                scratchvar_time_period.load() != Int(0),
+                scratchvar_unlock_timestamp.load() != Int(0),
 
                 #Lock transfer must be in progress
                 lock_transfer_status(1, Txn.accounts[1]) == Txn.accounts[0],
@@ -378,7 +377,7 @@ def approval_program():
         #Updating lock details to new owner's local state
         write_user_local_state(
             scratchvar_new_key.load(),
-            scratchvar_time_period.load()
+            scratchvar_unlock_timestamp.load()
         ),
 
         #Incrementing lock counter of new owner on claiming a lock

@@ -439,7 +439,8 @@ concat
 gtxn 1 AssetAmount
 itob
 concat
-gtxna 0 ApplicationArgs 1
+global LatestTimestamp
+itob
 concat
 store 2
 int 0
